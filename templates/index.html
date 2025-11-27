@@ -6,46 +6,453 @@
     <meta name="viewport" content="width=device-width, user-scalable=no">
     <meta name="robots" content="noindex, nofollow">
 
-    <link rel="stylesheet" type="text/css" href="static/css/thirdparty.min.css">
-    <link rel="stylesheet" type="text/css" href="static/css/main.css">
-    <link rel="stylesheet" type="text/css" href="static/css/media.css">
-
     <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.min.js"></script>
-
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>
-
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="static/js/application.js"></script>
 
-    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0e27;
+            color: #e0e0e0;
+            overflow-x: hidden;
+        }
+
+        /* Animated Background */
+        .cyber-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+            z-index: -2;
+        }
+
+        .grid-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: -1;
+            animation: gridScroll 20s linear infinite;
+        }
+
+        @keyframes gridScroll {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(50px); }
+        }
+
+        /* Particle Animation */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: #00ffff;
+            border-radius: 50%;
+            opacity: 0;
+            animation: float 8s infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(100vh) translateX(0); opacity: 0; }
+            10% { opacity: 0.6; }
+            90% { opacity: 0.6; }
+            100% { transform: translateY(-100vh) translateX(100px); opacity: 0; }
+        }
+
+        /* Header */
+        .header-container {
+            background: linear-gradient(135deg, rgba(0, 255, 255, 0.1) 0%, rgba(147, 51, 234, 0.1) 100%);
+            border-bottom: 2px solid rgba(0, 255, 255, 0.3);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.1), transparent);
+            animation: scan 3s infinite;
+        }
+
+        @keyframes scan {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(45deg, #00ffff, #9333ea);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            animation: glow 2s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.5)); }
+            50% { filter: drop-shadow(0 0 20px rgba(0, 255, 255, 0.8)); }
+        }
+
+        .subtitle {
+            color: #00ffff;
+            font-size: 1rem;
+            opacity: 0.8;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .pulse-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #00ff00;
+            border-radius: 50%;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 255, 0, 0.7); }
+            50% { opacity: 0.5; transform: scale(1.2); box-shadow: 0 0 0 10px rgba(0, 255, 0, 0); }
+        }
+
+        /* Main Content */
+        .content-container {
+            padding: 0 2rem 2rem;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Two Column Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 1024px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Chart Container */
+        .chart-container {
+            background: rgba(26, 31, 58, 0.6);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            height: 350px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-wrapper {
+            flex: 1;
+            position: relative;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .chart-wrapper canvas {
+            position: absolute !important;
+            top: 0;
+            left: 0;
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        /* Map Container */
+        .map-container {
+            background: rgba(26, 31, 58, 0.6);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            height: 350px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #ipMap {
+            flex: 1;
+            border-radius: 8px;
+            background: #1a1f3a;
+            min-height: 0;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            color: #00ffff;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .section-title::before {
+            content: '▸';
+            color: #9333ea;
+            font-size: 1.5rem;
+            animation: blink 1.5s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* Table */
+        .table-container {
+            background: rgba(26, 31, 58, 0.6);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 2rem;
+            overflow-x: auto;
+            backdrop-filter: blur(10px);
+        }
+
+        #details {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        #details thead {
+            background: rgba(0, 255, 255, 0.1);
+        }
+
+        #details th {
+            padding: 1rem;
+            text-align: left;
+            color: #00ffff;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 2px solid rgba(0, 255, 255, 0.3);
+        }
+
+        #details td {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: #e0e0e0;
+        }
+
+        #details tr {
+            transition: all 0.3s ease;
+        }
+
+        #details tbody tr:hover {
+            background: rgba(0, 255, 255, 0.05);
+            transform: translateX(5px);
+        }
+
+        #details tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Alert Animation */
+        @keyframes alertPulse {
+            0%, 100% { background: rgba(255, 0, 0, 0.1); }
+            50% { background: rgba(255, 0, 0, 0.2); }
+        }
+
+        .alert-row {
+            animation: alertPulse 2s infinite;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(26, 31, 58, 0.3);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 255, 255, 0.3);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 255, 255, 0.5);
+        }
+
+        /* Leaflet customization */
+        .leaflet-container {
+            background: #1a1f3a;
+        }
+
+        .leaflet-popup-content-wrapper {
+            background: rgba(26, 31, 58, 0.95);
+            color: #e0e0e0;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+        }
+
+        .leaflet-popup-tip {
+            background: rgba(26, 31, 58, 0.95);
+        }
+
+        .leaflet-marker-icon {
+            border: none !important;
+            background: transparent !important;
+        }
+
+        .leaflet-popup-content {
+            color: #e0e0e0 !important;
+            font-size: 14px;
+        }
+
+        .leaflet-popup-content strong {
+            color: #00ffff !important;
+        }
+
+        /* Pulsing marker style */
+        .pulsing-marker {
+            background: transparent;
+            border: none;
+        }
+
+        #noscript {
+            background: rgba(255, 0, 0, 0.2);
+            border: 2px solid #ff0000;
+            padding: 2rem;
+            text-align: center;
+            margin: 2rem;
+            border-radius: 12px;
+            color: #ff6b6b;
+        }
+    </style>
 </head>
 <body>
-<div class="container">
-  <div class="jumbotron">
-    <h1>APT Detection System</h1>
-    <p>By Avidu Witharana</p>
-  </div>
-</div>
-    
+    <div class="cyber-background"></div>
+    <div class="grid-overlay"></div>
+    <div class="particles" id="particles"></div>
 
-
-<div class="container" id="content">
-    <canvas width = 60 height = 20 id="myChart"></canvas>
-    <div class="row">
-        <p>Captured flow info here:</p>
-        <h3>Captured flow:</h3>
-        <div id="log">
-        <table width="100%" border="1" cellpadding="2" cellspacing="0" class="display compact" id="details">
-        </table>
-        </div> <!-- /#log -->
+    <div class="header-container">
+        <h1>🛡️ Intrusion Detection System</h1>
+        <p class="subtitle">
+            <span class="pulse-dot"></span>
+            Live Network Monitoring | By Avidu Witharana
+        </p>
     </div>
-</div>
-<noscript>
-  <div id="noscript">
-      Javascript is disabled in your browser. You must have Javascript enabled to utilize the functionality of this page.
-  </div>
-</noscript>
 
+    <div class="content-container">
+        <!-- Two Column Layout: Chart and Map -->
+        <div class="dashboard-grid">
+            <!-- Traffic Analysis Chart -->
+            <div class="chart-container">
+                <h3 class="section-title">Traffic Analysis</h3>
+                <div class="chart-wrapper">
+                    <canvas id="myChart"></canvas>
+                </div>
+            </div>
 
+            <!-- IP Geolocation Map -->
+            <div class="map-container">
+                <h3 class="section-title">🌍 IP Geolocation Map</h3>
+                <div id="ipMap"></div>
+            </div>
+        </div>
+
+        <!-- Network Flow Detection Table -->
+        <div class="table-container">
+            <h3 class="section-title">Network Flow Detection</h3>
+            <div id="log">
+                <table id="details">
+                    <thead>
+                        <tr>
+                            <th>Flow ID</th>
+                            <th>Src IP</th>
+                            <th>Src Port</th>
+                            <th>Dst IP</th>
+                            <th>Dst Port</th>
+                            <th>Protocol</th>
+                            <th>Flow start time</th>
+                            <th>Flow last seen</th>
+                            <th>App name</th>
+                            <th>PID</th>
+                            <th>Prediction</th>
+                            <th>Prob</th>
+                            <th>Risk</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Dynamic content will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <noscript>
+        <div id="noscript">
+            ⚠️ Javascript is disabled in your browser. You must have Javascript enabled to utilize the functionality of this page.
+        </div>
+    </noscript>
+
+    <script>
+        // Create floating particles only
+        function createParticles() {
+            const container = document.getElementById('particles');
+            const particleCount = 30;
+            
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 8 + 's';
+                particle.style.animationDuration = (Math.random() * 5 + 5) + 's';
+                container.appendChild(particle);
+            }
+        }
+
+        createParticles();
+        console.log('✓ Particles initialized');
+    </script>
 </body>
 </html>

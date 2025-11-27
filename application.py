@@ -45,8 +45,8 @@ app.config['DEBUG'] = True
 # Initialize SocketIO with updated parameters
 socketio = SocketIO(
     app, 
-    async_mode='threading',  # Changed from None
-    cors_allowed_origins="*",  # Add CORS support
+    async_mode='threading',
+    cors_allowed_origins="*",
     logger=True, 
     engineio_logger=True,
     ping_timeout=60,
@@ -107,23 +107,19 @@ FlowTimeout = 600
 # Model Loading
 # =============================================================================
 
-# =============================================================================
-# Model Loading
-# =============================================================================
-
-print("Loading models...")
+print("="*60)
+print("Loading ML Models...")
+print("="*60)
 try:
-    # Load models in correct order
-    print("  Loading autoencoder scaler...")
+    print("  [1/4] Loading autoencoder scaler...")
     ae_scaler = joblib.load("models/preprocess_pipeline_AE_39ft.save")
     
-    print("  Loading autoencoder model...")
+    print("  [2/4] Loading autoencoder model...")
     ae_model = keras.models.load_model('models/autoencoder_39ft.hdf5', compile=False)
     
-    print("  Loading Random Forest classifier...")
-    rf_classifier = joblib.load('models/model.pkl')  # Changed variable name to avoid conflicts
+    print("  [3/4] Loading Random Forest classifier...")
+    rf_classifier = joblib.load('models/model.pkl')
     
-    # Verify it's a valid classifier
     if not hasattr(rf_classifier, 'predict'):
         raise TypeError(f"Loaded object is not a classifier: {type(rf_classifier)}")
     
@@ -131,16 +127,17 @@ try:
     print(f"  ✓ Number of classes: {len(rf_classifier.classes_)}")
     print(f"  ✓ Classes: {list(rf_classifier.classes_)}")
     
-    # Assign to global variable
     classifier = rf_classifier
     
-    # Load explainer
-    print("  Loading LIME explainer...")
+    print("  [4/4] Loading LIME explainer...")
     with open('models/explainer', 'rb') as f:
         explainer = dill.load(f)
     
     predict_fn_rf = lambda x: classifier.predict_proba(x).astype(float)
+    
+    print("="*60)
     print("✓ All models loaded successfully!")
+    print("="*60)
     
 except FileNotFoundError as e:
     print(f"✗ Model file not found: {e}")
@@ -159,7 +156,6 @@ except Exception as e:
     print("1. Run 'python retrain_classifier.py' to retrain models")
     print("2. Make sure all model files exist in the 'models' directory")
     print("3. Check that models were trained with compatible sklearn version")
-    import traceback
     traceback.print_exc()
     raise
 
@@ -185,15 +181,15 @@ def ipInfo(addr=''):
 def get_risk_html(proba_risk):
     """Generate risk level HTML based on probability"""
     if proba_risk > 0.8:
-        return '<p style="color:red;">Very High</p>'
+        return '<p style="color:#ff4444; font-weight: bold;">🔴 Very High</p>'
     elif proba_risk > 0.6:
-        return '<p style="color:orangered;">High</p>'
+        return '<p style="color:#ff6b35; font-weight: bold;">🟠 High</p>'
     elif proba_risk > 0.4:
-        return '<p style="color:orange;">Medium</p>'
+        return '<p style="color:#ffa500; font-weight: bold;">🟡 Medium</p>'
     elif proba_risk > 0.2:
-        return '<p style="color:green;">Low</p>'
+        return '<p style="color:#00ff88; font-weight: bold;">🟢 Low</p>'
     else:
-        return '<p style="color:limegreen;">Minimal</p>'
+        return '<p style="color:#00ff88; font-weight: bold;">✅ Minimal</p>'
 
 def get_country_flag_html(ip):
     """Generate country flag HTML for IP address"""
@@ -216,10 +212,9 @@ def get_country_flag_html(ip):
 
 def classify(features):
     """Classify network flow and emit results via SocketIO"""
-    global flow_count, classifier  # Ensure we're using global classifier
+    global flow_count, classifier
     
     try:
-        # Debug: Check classifier type at start
         if not hasattr(classifier, 'predict'):
             print(f"ERROR: classifier is {type(classifier)}, not a model!")
             return None
@@ -233,12 +228,12 @@ def classify(features):
         src_ip_dict[src_ip] = src_ip_dict.get(src_ip, 0) + 1
         
         # Add country flags
-        for i in [0, 2]:  # Source and destination IPs
+        for i in [0, 2]:
             feature_string[i] += get_country_flag_html(feature_string[i])
         
         # Skip if invalid features
         if np.nan in features_numeric:
-            print("Warning: NaN values in features, skipping classification")
+            print("⚠️  Warning: NaN values in features, skipping classification")
             return
         
         # Predict
@@ -251,7 +246,7 @@ def classify(features):
         classification = str(result[0])
         
         if result[0] != 'Benign':
-            print(f"Alert: {classification} detected - {feature_string}")
+            print(f"🚨 ALERT: {classification} detected from {feature_string[0]}")
         
         # Log to files
         flow_count += 1
@@ -283,7 +278,7 @@ def classify(features):
         return [flow_count] + record + [classification, proba_score, risk_html]
         
     except Exception as e:
-        print(f"Classification error: {e}")
+        print(f"❌ Classification error: {e}")
         traceback.print_exc()
         return None
 
@@ -318,14 +313,12 @@ def newPacket(p):
         if packet.getFwdID() in current_flows:
             flow = current_flows[packet.getFwdID()]
             
-            # Check timeout
             if (packet.getTimestamp() - flow.getFlowLastSeen()) > FlowTimeout:
                 classify(flow.terminated())
                 del current_flows[packet.getFwdID()]
                 flow = Flow(packet)
                 current_flows[packet.getFwdID()] = flow
             
-            # Check termination flags
             elif packet.getFINFlag() or packet.getRSTFlag():
                 flow.new(packet, 'fwd')
                 classify(flow.terminated())
@@ -339,14 +332,12 @@ def newPacket(p):
         elif packet.getBwdID() in current_flows:
             flow = current_flows[packet.getBwdID()]
             
-            # Check timeout
             if (packet.getTimestamp() - flow.getFlowLastSeen()) > FlowTimeout:
                 classify(flow.terminated())
                 del current_flows[packet.getBwdID()]
                 flow = Flow(packet)
                 current_flows[packet.getFwdID()] = flow
             
-            # Check termination flags
             elif packet.getFINFlag() or packet.getRSTFlag():
                 flow.new(packet, 'bwd')
                 classify(flow.terminated())
@@ -362,19 +353,18 @@ def newPacket(p):
             current_flows[packet.getFwdID()] = flow
     
     except AttributeError:
-        # Not IP or TCP packet
         pass
     except Exception as e:
-        print(f"Packet processing error: {e}")
+        print(f"❌ Packet processing error: {e}")
         traceback.print_exc()
 
 def snif_and_detect():
     """Main packet sniffing loop"""
     while not thread_stop_event.isSet():
         try:
-            print("="*50)
-            print("Begin Sniffing")
-            print("="*50)
+            print("="*60)
+            print("🔍 Starting Network Capture...")
+            print("="*60)
             sniff(prn=newPacket, store=False, stop_filter=lambda x: thread_stop_event.isSet())
             
             # Classify remaining flows
@@ -384,11 +374,11 @@ def snif_and_detect():
             current_flows.clear()
             
         except Exception as e:
-            print(f"Sniffing error: {e}")
+            print(f"❌ Sniffing error: {e}")
             traceback.print_exc()
             if not thread_stop_event.isSet():
                 import time
-                time.sleep(5)  # Wait before retrying
+                time.sleep(5)
 
 # =============================================================================
 # Flask Routes
@@ -421,7 +411,7 @@ def flow_detail():
         proba_score = list(predict_fn_rf(X))
         risk_proba = sum(proba_score[0][1:])
         risk = get_risk_html(risk_proba)
-        risk = f"Risk: {risk}"
+        risk = f"Risk Assessment: {risk}"
         
         # LIME explanation
         exp = explainer.explain_instance(
@@ -442,32 +432,39 @@ def flow_detail():
         col_n_largest = ae_features[ind_n_abs_largest]
         err_n_largest = err[0][ind_n_abs_largest]
         
-        # Create plot
+        # Create plot with modern styling
         plot_div = plotly.offline.plot({
             "data": [
                 go.Bar(
                     x=col_n_largest.tolist(),
                     y=err_n_largest.tolist(),
-                    marker=dict(color='rgba(50, 171, 96, 0.6)')
+                    marker=dict(
+                        color=err_n_largest.tolist(),
+                        colorscale='Viridis',
+                        line=dict(color='rgba(0, 255, 255, 0.3)', width=1)
+                    )
                 )
             ],
             "layout": go.Layout(
                 title="Top 5 Autoencoder Reconstruction Errors",
-                xaxis=dict(title="Feature"),
-                yaxis=dict(title="Error")
+                xaxis=dict(title="Feature", gridcolor='rgba(255, 255, 255, 0.1)'),
+                yaxis=dict(title="Error", gridcolor='rgba(255, 255, 255, 0.1)'),
+                paper_bgcolor='rgba(15, 20, 40, 0.8)',
+                plot_bgcolor='rgba(15, 20, 40, 0.8)',
+                font=dict(color='#e0e0e0')
             )
         }, include_plotlyjs=False, output_type='div')
         
         return render_template(
             'detail.html',
-            tables=[flow.reset_index(drop=True).transpose().to_html(classes='data')],
+            tables=[flow.reset_index(drop=True).transpose().to_html(classes='data', border=0)],
             exp=exp.as_html(),
             ae_plot=plot_div,
             risk=risk
         )
     
     except Exception as e:
-        print(f"Flow detail error: {e}")
+        print(f"❌ Flow detail error: {e}")
         traceback.print_exc()
         return f"Error: {str(e)}", 500
 
@@ -479,16 +476,16 @@ def flow_detail():
 def test_connect():
     """Handle client connection"""
     global thread
-    print('Client connected')
+    print('✓ Client connected')
     
     if not thread.is_alive():
-        print("Starting packet capture thread...")
+        print("▶️  Starting packet capture thread...")
         thread = socketio.start_background_task(snif_and_detect)
 
 @socketio.on('disconnect', namespace='/test')
 def test_disconnect():
     """Handle client disconnection"""
-    print('Client disconnected')
+    print('✗ Client disconnected')
 
 # =============================================================================
 # Cleanup
@@ -500,9 +497,9 @@ def cleanup():
         thread_stop_event.set()
         f.close()
         f2.close()
-        print("Cleanup completed")
+        print("✓ Cleanup completed")
     except Exception as e:
-        print(f"Cleanup error: {e}")
+        print(f"❌ Cleanup error: {e}")
 
 import atexit
 atexit.register(cleanup)
@@ -513,6 +510,6 @@ atexit.register(cleanup)
 
 if __name__ == '__main__':
     print("="*60)
-    print("APT Detection System Starting...")
+    print("🛡️  APT Detection System Starting...")
     print("="*60)
     socketio.run(app, host='0.0.0.0', port=5000, debug=True, allow_unsafe_werkzeug=True)

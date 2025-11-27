@@ -6,74 +6,517 @@
     <meta name="viewport" content="width=device-width, user-scalable=no">
     <meta name="robots" content="noindex, nofollow">
     
-
     <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    <!-- <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.min.js"></script> -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 
-    <!-- <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script> -->
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script> 
-    <!-- <script src="static/js/application.js"></script> -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    <link rel="stylesheet" type="text/css" href="static/css/thirdparty.min.css">
-    <link rel="stylesheet" type="text/css" href="static/css/main.css">
-    <link rel="stylesheet" type="text/css" href="static/css/media.css">
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0e27;
+            color: #e0e0e0;
+            overflow-x: hidden;
+        }
 
-    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+        /* Animated Background */
+        .cyber-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+            z-index: -2;
+        }
+
+        .grid-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: -1;
+            animation: gridScroll 20s linear infinite;
+        }
+
+        @keyframes gridScroll {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(50px); }
+        }
+
+        /* Header */
+        .header-container {
+            background: linear-gradient(135deg, rgba(0, 255, 255, 0.1) 0%, rgba(147, 51, 234, 0.1) 100%);
+            border-bottom: 2px solid rgba(0, 255, 255, 0.3);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.1), transparent);
+            animation: scan 3s infinite;
+        }
+
+        @keyframes scan {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(45deg, #00ffff, #9333ea);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .back-button {
+            display: inline-block;
+            margin-top: 1rem;
+            padding: 0.75rem 1.5rem;
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            color: #00ffff;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.9rem;
+        }
+
+        .back-button:hover {
+            background: rgba(0, 255, 255, 0.2);
+            border-color: rgba(0, 255, 255, 0.5);
+            transform: translateX(-5px);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        }
+
+        /* Content Container */
+        .content-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem 2rem;
+        }
+
+        /* Risk Alert */
+        .risk-container {
+            background: rgba(26, 31, 58, 0.6);
+            border: 2px solid rgba(0, 255, 255, 0.3);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .risk-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.05), transparent);
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .risk-container h3 {
+            font-size: 2rem;
+            margin: 0;
+            position: relative;
+        }
+
+        /* Section Cards */
+        .section-card {
+            background: rgba(26, 31, 58, 0.6);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .section-card:hover {
+            border-color: rgba(0, 255, 255, 0.4);
+            box-shadow: 0 10px 30px rgba(0, 255, 255, 0.15);
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            color: #00ffff;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid rgba(0, 255, 255, 0.2);
+        }
+
+        .section-title::before {
+            content: '▸';
+            color: #9333ea;
+            font-size: 1.8rem;
+            animation: blink 1.5s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .section-description {
+            color: #888;
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        /* LIME Explanation Styling */
+        .lime-container {
+            background: rgba(15, 20, 40, 0.8);
+            border-radius: 8px;
+            padding: 2rem;
+            overflow-x: auto;
+        }
+
+        /* Override LIME default styles for better visibility */
+        .lime-container table {
+            color: #e0e0e0 !important;
+            background: transparent !important;
+        }
+
+        .lime-container th {
+            color: #00ffff !important;
+            background: rgba(0, 255, 255, 0.1) !important;
+            padding: 0.75rem !important;
+            border: 1px solid rgba(0, 255, 255, 0.2) !important;
+        }
+
+        .lime-container td {
+            color: #e0e0e0 !important;
+            background: rgba(26, 31, 58, 0.4) !important;
+            padding: 0.75rem !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .lime-container .lime-info {
+            color: #b0b0b0 !important;
+            background: rgba(0, 255, 255, 0.05) !important;
+        }
+
+        /* Make LIME text more visible */
+        .lime-container * {
+            color: #e0e0e0 !important;
+        }
+
+        .lime-container strong {
+            color: #00ffff !important;
+        }
+
+        .lime-info-box {
+            background: rgba(0, 255, 255, 0.05);
+            border-left: 4px solid #00ffff;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            border-radius: 4px;
+        }
+
+        .lime-info-box h4 {
+            color: #00ffff;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .lime-info-box p {
+            color: #b0b0b0;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        /* Plotly Chart Styling */
+        .plotly-container {
+            background: rgba(15, 20, 40, 0.8);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        /* Table Styling */
+        .feature-table {
+            background: rgba(15, 20, 40, 0.8);
+            border-radius: 8px;
+            padding: 1.5rem;
+            overflow-x: auto;
+        }
+
+        .feature-table table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        .feature-table th {
+            padding: 1rem;
+            text-align: left;
+            color: #00ffff;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 2px solid rgba(0, 255, 255, 0.3);
+            background: rgba(0, 255, 255, 0.05);
+        }
+
+        .feature-table td {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: #e0e0e0;
+        }
+
+        /* Fix Risk column HTML rendering */
+        .feature-table td p {
+            margin: 0;
+            padding: 0;
+            display: inline;
+        }
+
+        .feature-table tr:hover {
+            background: rgba(0, 255, 255, 0.05);
+        }
+
+        .feature-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Divider */
+        .divider {
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.3), transparent);
+            margin: 2rem 0;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(26, 31, 58, 0.3);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 255, 255, 0.3);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 255, 255, 0.5);
+        }
+
+        /* Risk Level Colors */
+        .risk-container p[style*="red"],
+        .risk-container p[style*="#ff4444"] {
+            color: #ff4444 !important;
+            text-shadow: 0 0 20px rgba(255, 68, 68, 0.5);
+            animation: alertGlow 1.5s ease-in-out infinite;
+        }
+
+        .risk-container p[style*="orangered"],
+        .risk-container p[style*="#ff6b35"] {
+            color: #ff6b35 !important;
+            text-shadow: 0 0 20px rgba(255, 107, 53, 0.5);
+        }
+
+        .risk-container p[style*="orange"],
+        .risk-container p[style*="#ffa500"] {
+            color: #ffa500 !important;
+            text-shadow: 0 0 20px rgba(255, 165, 0, 0.5);
+        }
+
+        .risk-container p[style*="green"],
+        .risk-container p[style*="limegreen"],
+        .risk-container p[style*="#00ff88"] {
+            color: #00ff88 !important;
+            text-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+        }
+
+        @keyframes alertGlow {
+            0%, 100% { filter: drop-shadow(0 0 10px rgba(255, 68, 68, 0.5)); }
+            50% { filter: drop-shadow(0 0 20px rgba(255, 68, 68, 0.9)); }
+        }
+    </style>
 </head>
 <body>
-<div class="container">
-  <div class="jumbotron">
-    <h1>APT Detection System</h1>
-    <p>By Avidu Witharana</p>
-  </div>
-</div>
+    <div class="cyber-background"></div>
+    <div class="grid-overlay"></div>
 
-<div class="container">
-  <b>
-  <h3 align="center">
-  {{ risk|safe }}
-  </h3>
-  </b>
-</div>
-<hr>
+    <div class="header-container">
+        <h1>🔍 Flow Analysis Details</h1>
+        <a href="/" class="back-button">← Back to Dashboard</a>
+    </div>
 
-{% if exp %}
-  <!-- <h3 align="center">LIME-explained results using {#{ classifier }#}</h3> -->
-  <h3 align="center">LIME-explained results using Random Forest Classifier (Top-6 values):</h3>
-  <div class="container">
-      {{ exp|safe }}
-  </div>
-{% endif %}
-<hr>
-<br></br>
+    <div class="content-container">
+        <!-- Risk Level -->
+        <div class="risk-container">
+            <h3>{{ risk|safe }}</h3>
+        </div>
 
-<h3 align="center">Ranking features by reconstruct error by Auto Encoder:</h3>
-<div class="container">
-  {{ ae_plot|safe }}
-</div>
-<hr>
-<br></br>
+        <div class="divider"></div>
 
-<h3 align="center">List of all features and values used:
-<div class="container">
-  <!-- <div class="panel-body table-responsive"> -->
-    <table class="table2 table-bordered" >
-      {% for table in tables %}
-      <tr>
-        <!-- <td>{#{titles[loop.index]}#}</td> -->
-        <td>{{ table|safe }}</td>
-      </tr>
-      {% endfor %}
+        <!-- LIME Explanation -->
+        {% if exp %}
+        <div class="section-card">
+            <h3 class="section-title">🤖 AI Model Explanation</h3>
+            
+            <div class="lime-info-box">
+                <h4>What is this showing?</h4>
+                <p>
+                    This analysis uses <strong>LIME (Local Interpretable Model-agnostic Explanations)</strong> to explain 
+                    why our Random Forest classifier made this prediction. The visualization below shows the <strong>top 6 features</strong> 
+                    that most influenced the classification decision.
+                </p>
+                <p style="margin-top: 0.5rem;">
+                    <strong>How to read it:</strong> Features pushing toward "NOT Benign" (left side, orange) indicate suspicious behavior, 
+                    while features pushing toward "Benign" (right side, blue) indicate normal behavior. The length of each bar shows 
+                    how much that feature contributed to the final prediction.
+                </p>
+            </div>
 
-    </table>
-</div>
-</h3>
-  <!-- </div> -->
+            <div class="lime-container">
+                {{ exp|safe }}
+            </div>
+        </div>
+        {% endif %}
 
-</div>
+        <div class="divider"></div>
 
+        <!-- Autoencoder Plot -->
+        <div class="section-card">
+            <h3 class="section-title">🧠 Anomaly Detection Analysis</h3>
+            
+            <div class="lime-info-box">
+                <h4>What is this showing?</h4>
+                <p>
+                    This chart displays the <strong>reconstruction errors</strong> from our Autoencoder neural network, 
+                    which was trained to understand normal network traffic patterns. When the autoencoder struggles to 
+                    accurately reconstruct certain features (high error), it suggests those features are <strong>unusual or anomalous</strong>.
+                </p>
+                <p style="margin-top: 0.5rem;">
+                    <strong>How to read it:</strong> Larger bars (higher absolute error) indicate features that deviate significantly 
+                    from normal patterns. Positive errors (bars above zero) mean the actual value was higher than expected, 
+                    while negative errors mean it was lower than expected.
+                </p>
+            </div>
+
+            <div class="plotly-container">
+                {{ ae_plot|safe }}
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Feature Table -->
+        <div class="section-card">
+            <h3 class="section-title">📊 Complete Feature Set</h3>
+            
+            <p class="section-description">
+                Below is the complete list of all network flow features extracted and analyzed by the detection system. 
+                These features represent various characteristics of the network traffic, including timing patterns, 
+                packet sizes, protocol flags, and connection states.
+            </p>
+
+            <div class="feature-table">
+                {% for table in tables %}
+                    {{ table|safe }}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Enhance Plotly charts with dark theme
+        document.addEventListener('DOMContentLoaded', function() {
+            const plotlyDivs = document.querySelectorAll('.plotly-container > div');
+            plotlyDivs.forEach(div => {
+                if (div.data && div.layout) {
+                    Plotly.relayout(div, {
+                        paper_bgcolor: 'rgba(15, 20, 40, 0.8)',
+                        plot_bgcolor: 'rgba(15, 20, 40, 0.8)',
+                        font: { color: '#e0e0e0' },
+                        xaxis: { gridcolor: 'rgba(255, 255, 255, 0.1)' },
+                        yaxis: { gridcolor: 'rgba(255, 255, 255, 0.1)' }
+                    });
+                }
+            });
+
+            // Enhance LIME table visibility
+            setTimeout(function() {
+                const limeTables = document.querySelectorAll('.lime-container table');
+                limeTables.forEach(table => {
+                    table.style.setProperty('color', '#e0e0e0', 'important');
+                    
+                    // Style all cells
+                    const cells = table.querySelectorAll('td, th');
+                    cells.forEach(cell => {
+                        cell.style.setProperty('color', '#e0e0e0', 'important');
+                        cell.style.setProperty('background', 'rgba(26, 31, 58, 0.3)', 'important');
+                        cell.style.setProperty('border', '1px solid rgba(255, 255, 255, 0.1)', 'important');
+                    });
+
+                    // Style headers specifically
+                    const headers = table.querySelectorAll('th');
+                    headers.forEach(header => {
+                        header.style.setProperty('color', '#00ffff', 'important');
+                        header.style.setProperty('background', 'rgba(0, 255, 255, 0.1)', 'important');
+                    });
+                });
+
+                // Make all LIME text visible
+                const limeElements = document.querySelectorAll('.lime-container *');
+                limeElements.forEach(el => {
+                    if (el.style.color === 'black' || el.style.color === 'rgb(0, 0, 0)') {
+                        el.style.setProperty('color', '#e0e0e0', 'important');
+                    }
+                });
+            }, 500);
+        });
+    </script>
 </body>
-
-
 </html>
-
