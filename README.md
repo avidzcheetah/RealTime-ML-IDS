@@ -380,7 +380,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Contact
 
-**Project Maintainer:** Nguyen Viet Hoang  
+**Project Maintainer (New version):** Avidu Witharana  
+**Email:** avidu@pm.me
+**GitHub:** [@avidzcheetah](https://github.com/avidzcheetah)
+
+**Project Creator (Old Version):** Nguyen Viet Hoang  
 **Email:** hoang.nv194434@sis.hust.edu.vn  
 **GitHub:** [@HoangNV2001](https://github.com/HoangNV2001)
 
